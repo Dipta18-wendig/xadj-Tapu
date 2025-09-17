@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cross Metering Credit Adjustment</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">Cross Metering Credit Adjustment</h1>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Priority Table -->
+    <div class="bg-white p-4 rounded shadow">
+      <h2 id="priorityInfo" class="text-xl font-semibold mb-4 text-green-700"></h2>
+      <table class="w-full text-sm border border-gray-300" id="priorityTable">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="p-2 border">Date</th>
+            <th class="p-2 border">No of Days</th>
+            <th class="p-2 border">Consumption</th>
+            <th class="p-2 border">Amount</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Secondary Table -->
+    <div class="bg-white p-4 rounded shadow">
+      <h2 id="secondaryInfo" class="text-xl font-semibold mb-4 text-yellow-700"></h2>
+      <table class="w-full text-sm border border-gray-300" id="secondaryTable">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="p-2 border">Date</th>
+            <th class="p-2 border">No of Days</th>
+            <th class="p-2 border">Consumption</th>
+            <th class="p-2 border">Amount</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="bg-white mt-10 p-6 rounded shadow">
+    <canvas id="amountChart" height="100"></canvas>
+  </div>
+
+  <!-- Buttons -->
+  <div class="text-center mt-6 space-x-4">
+    <button id="compareBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+      Compare
+    </button>
+    <button id="saveBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+      Save
+    </button>
+  </div>
+
+  <!-- Result -->
+  <div id="resultBox" class="max-w-3xl mx-auto mt-4 text-center"></div>
+
+  <!-- Scripts -->
+  <script>
+    const priority = JSON.parse(sessionStorage.getItem("priorityCustomer"));
+    const secondary = JSON.parse(sessionStorage.getItem("secondaryCustomer"));
+    if (!priority || !secondary) {
+      alert("Customer data missing. Please start from the beginning.");
+      window.location.href = "trial.html";
+    }
+
+    document.getElementById("priorityInfo").textContent = `Name: ${priority.name} | Contract Account Number: ${priority.account}`;
+    document.getElementById("secondaryInfo").textContent = `Name: ${secondary.name} | Contract Account Number: ${secondary.account}`;
+
+    function createTable(tableId, moveInDate) {
+      const tbody = document.querySelector(`#${tableId} tbody`);
+      for (let i = 0; i < 36; i++) {
+        const row = document.createElement("tr");
+
+        const dateTd = document.createElement("td");
+        const dateInput = document.createElement("input");
+        dateInput.type = "text";
+        dateInput.placeholder = "MM-DD-YYYY";
+        dateInput.className = "border p-1 w-full";
+        dateInput.addEventListener("change", () => {
+          updateDays(i, tableId, moveInDate);
+          updateChart(tableId, i);
+        });
+        dateTd.appendChild(dateInput);
+
+        const daysTd = document.createElement("td");
+        daysTd.className = "border text-center days-cell";
+
+        const consTd = document.createElement("td");
+        const consInput = document.createElement("input");
+        consInput.type = "number";
+        consInput.className = "border p-1 w-full";
+        consTd.appendChild(consInput);
+
+        const amtTd = document.createElement("td");
+        const amtInput = document.createElement("input");
+        amtInput.type = "number";
+        amtInput.className = "border p-1 w-full";
+        amtInput.addEventListener("input", () => updateChart(tableId, i));
+        amtTd.appendChild(amtInput);
+
+        row.appendChild(dateTd);
+        row.appendChild(daysTd);
+        row.appendChild(consTd);
+        row.appendChild(amtTd);
+
+        tbody.appendChild(row);
+      }
+    }
+
+    function updateDays(index, tableId, moveInDate) {
+      const table = document.getElementById(tableId);
+      const rows = table.querySelectorAll("tbody tr");
+      const currentRow = rows[index];
+      const currentDateInput = currentRow.cells[0].querySelector("input");
+      const currentDate = new Date(currentDateInput.value);
+      let prevDate;
+
+      if (index === 0) {
+        prevDate = new Date(moveInDate);
+      } else {
+        const prevInput = rows[index - 1].cells[0].querySelector("input");
+        prevDate = new Date(prevInput.value);
+      }
+
+      const daysCell = currentRow.cells[1];
+      const diff = Math.ceil((currentDate - prevDate) / (1000 * 60 * 60 * 24));
+      daysCell.textContent = isNaN(diff) ? '' : diff;
+    }
+
+    const ctx = document.getElementById("amountChart").getContext("2d");
+    const comparisonChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: priority.name,
+            data: [],
+            backgroundColor: '#10B981',
+          },
+          {
+            label: secondary.name,
+            data: [],
+            backgroundColor: '#FBBF24',
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          title: {
+            display: true,
+            text: 'Amount Comparison on Each Date'
+          }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Date' } },
+          y: { beginAtZero: true, title: { display: true, text: 'Amount ($)' } }
+        }
+      }
+    });
+
+    function updateChart(tableId, rowIndex) {
+      const table = document.getElementById(tableId);
+      const row = table.querySelectorAll("tbody tr")[rowIndex];
+      const dateInput = row.cells[0].querySelector("input");
+      const amtInput = row.cells[3].querySelector("input");
+      const date = dateInput.value;
+      const amount = parseFloat(amtInput.value);
+      if (!date || isNaN(amount)) return;
+
+     const datasetIndex = tableId === "priorityTable" ? 0 : 1;
+
+  // ✅ If date was changed, remove the old one from chart
+  if (dateInput.dataset.oldDate && dateInput.dataset.oldDate !== date) {
+    const oldIndex = comparisonChart.data.labels.indexOf(dateInput.dataset.oldDate);
+
+    // only remove if no other row is using that old date
+    const stillExists = Array.from(document.querySelectorAll("table tbody tr input[type='text']")).some(
+      inp => inp !== dateInput && inp.value === dateInput.dataset.oldDate
+    );
+
+    if (oldIndex !== -1 && !stillExists) {
+      comparisonChart.data.labels.splice(oldIndex, 1);
+      comparisonChart.data.datasets[0].data.splice(oldIndex, 1);
+      comparisonChart.data.datasets[1].data.splice(oldIndex, 1);
+    }
+  }
+
+  // ✅ Add or update new date
+  const labelIndex = comparisonChart.data.labels.indexOf(date);
+  if (labelIndex === -1) {
+    comparisonChart.data.labels.push(date);
+    comparisonChart.data.datasets[0].data.push(0);
+    comparisonChart.data.datasets[1].data.push(0);
+    comparisonChart.data.datasets[datasetIndex].data[comparisonChart.data.labels.length - 1] = amount;
+  } else {
+    comparisonChart.data.datasets[datasetIndex].data[labelIndex] = amount;
+  }
+
+  // remember this as the "old" date for future edits
+  dateInput.dataset.oldDate = date;
+
+  comparisonChart.update();
+}
+
+    function calculateTotal(tableId) {
+      const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+      let total = 0;
+      rows.forEach(row => {
+        const amtInput = row.cells[3].querySelector("input");
+        const val = parseFloat(amtInput.value);
+        if (!isNaN(val)) total += val;
+      });
+      return total;
+    }
+
+    function getLast16ValidAmounts(tableId) {
+      const rows = Array.from(document.querySelectorAll(`#${tableId} tbody tr`));
+      const amounts = [];
+      for (let i = rows.length - 1; i >= 0 && amounts.length < 16; i--) {
+        const amtInput = rows[i].cells[3].querySelector("input");
+        const val = parseFloat(amtInput.value);
+        if (!isNaN(val)) amounts.unshift(val);
+      }
+      return amounts;
+    }
+
+    function getAmountsAfterDate(tableId, fromDate) {
+      const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+      const amounts = [];
+      rows.forEach(row => {
+        const dateVal = row.cells[0].querySelector("input").value;
+        const amtVal = row.cells[3].querySelector("input").value;
+        if (dateVal && amtVal) {
+          const rowDate = new Date(dateVal);
+          if (rowDate >= fromDate) {
+            const amount = parseFloat(amtVal);
+            if (!isNaN(amount)) amounts.push(amount);
+          }
+        }
+      });
+      return amounts;
+    }
+
+    function sumArray(arr) {
+      return arr.reduce((a, b) => a + b, 0);
+    }
+
+    document.getElementById("compareBtn").addEventListener("click", () => {
+      const priorityTotal = calculateTotal("priorityTable");
+      const secondaryTotal = calculateTotal("secondaryTable");
+
+      let result = `
+<b>${priority.name}</b> Total Amount: $${priorityTotal.toFixed(2)}<br>
+<b>${secondary.name}</b> Total Amount: $${secondaryTotal.toFixed(2)}<br><br>`;
+
+      if (priorityTotal > secondaryTotal) {
+        const diff = (priorityTotal - secondaryTotal).toFixed(2);
+        result += `<span class="text-green-600 font-semibold">✅ Credit to ${priority.name} with $${diff}</span>`;
+      } else {
+        const durationMs = new Date(secondary.uncross) - new Date(secondary.moveIn);
+        const durationMonths = durationMs / (1000 * 60 * 60 * 24 * 30.44);
+
+        if (durationMonths > 16 && durationMonths < 36) {
+          const newPriorityLast16 = getLast16ValidAmounts("secondaryTable");
+          const newSecondaryLast16 = getLast16ValidAmounts("priorityTable");
+
+          const newPrioritySum = sumArray(newPriorityLast16);
+          const newSecondarySum = sumArray(newSecondaryLast16);
+
+          result += `<b>🔁 Duration 16–36 months: Switching roles</b><br>`;
+          result += `${secondary.name} (new priority): $${newPrioritySum.toFixed(2)}<br>`;
+          result += `${priority.name} (new secondary): $${newSecondarySum.toFixed(2)}<br>`;
+
+          if (newPrioritySum > newSecondarySum) {
+            const diff = (newPrioritySum - newSecondarySum).toFixed(2);
+            result += `<span class="text-green-600 font-semibold">✅ Credit to ${secondary.name} with $${diff}</span>`;
+          } else {
+            result += `<span class="text-red-600 font-semibold">❌ No one is credited</span>`;
+          }
+
+        } else if (durationMonths < 16) {
+          const moveInDate = new Date(secondary.moveIn);
+          const newPriorityAmounts = getAmountsAfterDate("secondaryTable", moveInDate);
+          const newSecondaryAmounts = getAmountsAfterDate("priorityTable", moveInDate);
+
+          const newPrioritySum = sumArray(newPriorityAmounts);
+          const newSecondarySum = sumArray(newSecondaryAmounts);
+
+          result += `<b>📅 Duration &lt; 16 months: Using ${secondary.moveIn}</b><br>`;
+          result += `${secondary.name} (new priority): $${newPrioritySum.toFixed(2)}<br>`;
+          result += `${priority.name} (new secondary): $${newSecondarySum.toFixed(2)}<br>`;
+
+          if (newPrioritySum > newSecondarySum) {
+            const diff = (newPrioritySum - newSecondarySum).toFixed(2);
+            result += `<span class="text-green-600 font-semibold">✅ Credit to ${secondary.name} with $${diff}</span>`;
+          } else {
+            result += `<span class="text-red-600 font-semibold">❌ No one is credited</span>`;
+          }
+
+        } else {
+          result += `<span class="text-red-600 font-semibold">❌ No credit - secondary duration does not meet conditions</span>`;
+        }
+      }
+
+      document.getElementById("resultBox").innerHTML = `
+        <div class="mt-6 p-4 border rounded bg-white shadow-md text-sm leading-relaxed">
+          ${result}
+        </div>
+      `;
+    });
+
+    // Save to localStorage
+    document.getElementById("saveBtn").addEventListener("click", () => {
+      function collectTableData(tableId) {
+        const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+        const data = [];
+        rows.forEach(row => {
+          const date = row.cells[0].querySelector("input").value;
+          const days = row.cells[1].textContent;
+          const consumption = row.cells[2].querySelector("input").value;
+          const amount = row.cells[3].querySelector("input").value;
+          if (date && amount) {
+            data.push({ date, days, consumption, amount });
+          }
+        });
+        return data;
+      }
+
+      const priorityData = collectTableData("priorityTable");
+      const secondaryData = collectTableData("secondaryTable");
+
+      const priorityTotal = calculateTotal("priorityTable");
+      const secondaryTotal = calculateTotal("secondaryTable");
+
+      const chartData = {
+        labels: comparisonChart.data.labels,
+        priority: comparisonChart.data.datasets[0].data,
+        secondary: comparisonChart.data.datasets[1].data
+      };
+
+      const resultHTML = document.getElementById("resultBox").innerHTML;
+
+      let counter = parseInt(localStorage.getItem("saveCounter") || "1");
+      const recordId = `RID${String(counter).padStart(9, '0')}`;
+
+      const record = {
+        id: recordId,
+        timestamp: new Date().toISOString(),
+        priorityCustomer: priority,
+        secondaryCustomer: secondary,
+        priorityTotal,
+        secondaryTotal,
+        priorityData,
+        secondaryData,
+        chartData,
+        resultHTML
+      };
+
+
+      
+      const history = JSON.parse(localStorage.getItem("historyRecords") || "[]");
+      history.push(record);
+      localStorage.setItem("historyRecords", JSON.stringify(history));
+      localStorage.setItem("saveCounter", counter + 1);
+
+      alert(`✅ Saved as ${recordId}`);
+    });
+
+    // Init
+    createTable("priorityTable", priority.moveIn);
+    createTable("secondaryTable", secondary.moveIn);
+  </script>
+</body>
+</html>

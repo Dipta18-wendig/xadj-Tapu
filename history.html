@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Comparison History</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6">
+  <div class="w-full max-w-7xl bg-white rounded-lg shadow p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold text-gray-800">Cross Metering Comparison History</h1>
+      <div class="space-x-2">
+        <button onclick="goHome()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          Home
+        </button>
+        <button onclick="clearHistory()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+          Reset History
+        </button>
+      </div>
+    </div>
+
+    <!-- Search Fields -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+      <input id="dateSearch" type="date" class="w-full p-3 border border-gray-300 rounded" />
+      <input id="accountSearch" type="text" placeholder="Search by Contract Account No." class="w-full p-3 border border-gray-300 rounded" />
+      <button onclick="searchHistory()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Search</button>
+    </div>
+
+    <!-- History Table -->
+    <div class="overflow-auto">
+      <table class="min-w-full border border-gray-300 text-sm">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="p-3 border">Date</th>
+            <th class="p-3 border">Account A</th>
+            <th class="p-3 border">Name A</th>
+            <th class="p-3 border">Account B</th>
+            <th class="p-3 border">Name B</th>
+            <th class="p-3 border">Credited To</th>
+            <th class="p-3 border">Amount Credited ($)</th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody" class="bg-white"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // One-time dummy data creation if not exists
+    if (!localStorage.getItem("historyRecords")) {
+      const names = ["Alice", "Bob", "Charlie", "David", "Eva", "Frank", "Grace", "Helen", "Ian", "Judy"];
+      const getRandomDate = () => {
+        const start = new Date(2024, 0, 1);
+        const end = new Date();
+        const date = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+        return date.toISOString().split('T')[0];
+      };
+      const getRandomAccount = () => String(Math.floor(100000000000 + Math.random() * 900000000000));
+     const getRandomAmount = () => (Math.random() * 100 + 50).toFixed(2);
+
+
+      const dummyData = Array.from({ length: 10 }, () => {
+        const nameA = names[Math.floor(Math.random() * names.length)];
+        let nameB;
+        do {
+          nameB = names[Math.floor(Math.random() * names.length)];
+        } while (nameB === nameA);
+
+        const accountA = getRandomAccount();
+        const accountB = getRandomAccount();
+        const creditedTo = Math.random() > 0.5 ? nameA : nameB;
+        const amount = getRandomAmount();
+
+        return {
+          date: getRandomDate(),
+          accountA,
+          nameA,
+          accountB,
+          nameB,
+          creditedTo,
+          amount
+        };
+      });
+
+      localStorage.setItem("historyRecords", JSON.stringify(dummyData));
+    }
+
+    const historyData = JSON.parse(localStorage.getItem("historyRecords") || "[]");
+
+    function loadHistory(data = historyData) {
+      const tbody = document.getElementById("historyTableBody");
+      tbody.innerHTML = "";
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-500">No history records available.</td></tr>`;
+        return;
+      }
+
+        data.forEach(entry => {
+    // Handle both old and new record structures
+    const accountA = entry.accountA || (entry.priorityCustomer ? entry.priorityCustomer.account : "");
+    const nameA = entry.nameA || (entry.priorityCustomer ? entry.priorityCustomer.name : "");
+    const accountB = entry.accountB || (entry.secondaryCustomer ? entry.secondaryCustomer.account : "");
+    const nameB = entry.nameB || (entry.secondaryCustomer ? entry.secondaryCustomer.name : "");
+    let creditedTo = entry.creditedTo || "";
+
+    // If creditedTo not stored, decide from totals
+    if (!creditedTo && entry.priorityTotal !== undefined && entry.secondaryTotal !== undefined) {
+      if (entry.priorityTotal > entry.secondaryTotal) {
+        creditedTo = nameA;
+      } else if (entry.secondaryTotal > entry.priorityTotal) {
+        creditedTo = nameB;
+      } else {
+        creditedTo = "Equal Split";
+      }
+    }
+    const amount = entry.amount || (entry.priorityTotal && entry.secondaryTotal
+                                    ? Math.abs(entry.priorityTotal - entry.secondaryTotal).toFixed(2)
+                                    : "");
+
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td class="p-3 border">${entry.date || (entry.timestamp ? entry.timestamp.split("T")[0] : "")}</td>
+      <td class="p-3 border">${accountA}</td>
+      <td class="p-3 border">${nameA}</td>
+      <td class="p-3 border">${accountB}</td>
+      <td class="p-3 border">${nameB}</td>
+      <td class="p-3 border">${creditedTo}</td>
+      <td class="p-3 border">${amount}</td>
+    `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function searchHistory() {
+      const dateQuery = document.getElementById("dateSearch").value;
+      const accountQuery = document.getElementById("accountSearch").value.trim().toLowerCase();
+
+      const filtered = historyData.filter(entry => {
+        const dateMatch = !dateQuery || entry.date === dateQuery;
+        const accountMatch =
+          !accountQuery ||
+          entry.accountA.toLowerCase().includes(accountQuery) ||
+          entry.accountB.toLowerCase().includes(accountQuery);
+        return dateMatch && accountMatch;
+      });
+
+      loadHistory(filtered);
+    }
+
+    function clearHistory() {
+      const confirmClear = confirm("Are you sure you want to clear all history records?");
+      if (confirmClear) {
+        localStorage.removeItem("historyRecords");
+        location.reload();
+      }
+    }
+
+    function goHome() {
+      window.location.href = "trial.html";
+    }
+
+    // Initial load
+    loadHistory();
+
+
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cross Metering Adjustment</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- Navigation Bar -->
+  <nav class="bg-blue-700 text-white p-4 shadow-md">
+    <div class="max-w-6xl mx-auto flex justify-between items-center">
+      <h1 class="text-xl font-bold">Cross Metering System</h1>
+      <div class="space-x-6">
+       
+        <a href="history.html" class="hover:underline">History</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-4xl mx-auto mt-10">
+    <h1 class="text-3xl font-bold text-center text-blue-700 mb-8">
+      Cross Metering Adjustment
+    </h1>
+
+    <form id="customerForm" class="space-y-10">
+      <!-- Customer A -->
+      <div>
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Customer A Details</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block font-medium text-gray-700">Name</label>
+            <input type="text" name="custAName" required class="w-full border p-2 rounded"/>
+          </div>
+          <div>
+            <label class="block font-medium text-gray-700">Contract Account Number</label>
+            <input type="text" name="custAAccount" required class="w-full border p-2 rounded"/>
+          </div>
+          <div>
+            <label class="block font-medium text-gray-700">Move-In Date</label>
+            <input type="date" name="custAMoveIn" required class="w-full border p-2 rounded"/>
+          </div>
+          <div>
+            <label class="block font-medium text-gray-700">Date of Uncrossing</label>
+            <input type="date" name="custAUncross" required class="w-full border p-2 rounded"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customer B -->
+      <div>
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Customer B Details</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block font-medium text-gray-700">Name</label>
+            <input type="text" name="custBName" required class="w-full border p-2 rounded"/>
+          </div>
+          <div>
+            <label class="block font-medium text-gray-700">Contract Account Number</label>
+            <input type="text" name="custBAccount" required class="w-full border p-2 rounded"/>
+          </div>
+          <div>
+            <label class="block font-medium text-gray-700">Move-In Date</label>
+            <input type="date" name="custBMoveIn" required class="w-full border p-2 rounded"/>
+          </div>
+          <div>
+            <label class="block font-medium text-gray-700">Date of Uncrossing</label>
+            <input type="date" name="custBUncross" required class="w-full border p-2 rounded"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="text-center">
+        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+          Submit
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- JS -->
+  <script>
+    function calculateDays(startDate, endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const diffTime = end - start;
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // convert to days
+    }
+
+    document.getElementById('customerForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      // Gather inputs
+      const custA = {
+        name: event.target.custAName.value,
+        account: event.target.custAAccount.value,
+        moveIn: event.target.custAMoveIn.value,
+        uncross: event.target.custAUncross.value
+      };
+      const custB = {
+        name: event.target.custBName.value,
+        account: event.target.custBAccount.value,
+        moveIn: event.target.custBMoveIn.value,
+        uncross: event.target.custBUncross.value
+      };
+
+      // Calculate durations
+      const durationA = calculateDays(custA.moveIn, custA.uncross);
+      const durationB = calculateDays(custB.moveIn, custB.uncross);
+
+      // Assign priority and secondary
+      let priorityCustomer, secondaryCustomer;
+      if (durationA >= durationB) {
+        priorityCustomer = { ...custA, duration: durationA };
+        secondaryCustomer = { ...custB, duration: durationB };
+      } else {
+        priorityCustomer = { ...custB, duration: durationB };
+        secondaryCustomer = { ...custA, duration: durationA };
+      }
+
+      // Store in sessionStorage
+      sessionStorage.setItem("priorityCustomer", JSON.stringify(priorityCustomer));
+      sessionStorage.setItem("secondaryCustomer", JSON.stringify(secondaryCustomer));
+
+alert(`Redirecting to Cross Meter credit  Page\n\nPriority Customer:\nName: ${priorityCustomer.name}\nContract Account: ${priorityCustomer.account}`);
+
+      // Redirect to next page
+      window.location.href = "billing.html";
+    });
+  </script>
+</body>
+</html>
