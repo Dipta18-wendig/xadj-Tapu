@@ -370,17 +370,22 @@ function getConsumptionsAfterDate(tableId, fromDate) {
         if (durationMonths > 16 && durationMonths < 36) {
           const newPriorityLast16 = getLast16ValidAmounts("secondaryTable");
           const newSecondaryLast16 = getLast16ValidAmounts("priorityTable");
+          const newPriorityLast16Cons = getLast16ValidConsumptions("secondaryTable");
+          const newSecondaryLast16Cons = getLast16ValidConsumptions("priorityTable");
 
           const newPrioritySum = sumArray(newPriorityLast16);
           const newSecondarySum = sumArray(newSecondaryLast16);
+          const newPriorityConsumptions = sumArray(newPriorityLast16Cons);
+          const newSecondaryConsumptions = sumArray(newSecondaryLast16Cons);
 
           result += `<b>🔁 Duration 16–36 months: Switching roles</b><br>`;
-          result += `${secondary.name} (new priority): $${newPrioritySum.toFixed(2)}<br>`;
-          result += `${priority.name} (new secondary): $${newSecondarySum.toFixed(2)}<br>`;
+          result += `${secondary.name} (new priority): $${newPrioritySum.toFixed(2)}, Consumption: ${newPriorityConsumptions.toFixed(2)}<br>`;
+          result += `${priority.name} (new secondary): $${newSecondarySum.toFixed(2)}, Consumption: ${newSecondaryConsumptions.toFixed(2)}<br>`;
 
           if (newPrioritySum > newSecondarySum) {
             const diff = (newPrioritySum - newSecondarySum).toFixed(2);
-            result += `<span class="text-green-600 font-semibold">✅ Credit to ${secondary.name} with $${diff}</span>`;
+            const diff2 =(newPriorityConsumptions-newSecondaryConsumptions);
+            result += `<span class="text-green-600 font-semibold">✅ Credit to ${secondary.name} with $${diff} for ${diff2}  KWH reads.</span>`;
           } else {
             result += `<span class="text-red-600 font-semibold">❌ No one is credited</span>`;
           }
@@ -396,8 +401,8 @@ function getConsumptionsAfterDate(tableId, fromDate) {
           const newPrioritySum = sumArray(newPriorityAmounts);
           const newSecondarySum = sumArray(newSecondaryAmounts);
 
-            const newPriorityConsSum = sumArray(newPriorityConsumptions);
-            const newSecondaryConsSum = sumArray(newSecondaryConsumptions);
+            const newPriorityConsumptionsum = sumArray(newPriorityConsumptions);
+            const newSecondaryConsumptionsum = sumArray(newSecondaryConsumptions);
 
           result += `<b>📅 Duration &lt; 16 months: Using ${secondary.moveIn}</b><br>`;
           result += `${secondary.name} (new priority): $${newPrioritySum.toFixed(2)}<br>`;
@@ -405,7 +410,8 @@ function getConsumptionsAfterDate(tableId, fromDate) {
 
           if (newPrioritySum > newSecondarySum) {
             const diff = (newPrioritySum - newSecondarySum).toFixed(2);
-            result += `<span class="text-green-600 font-semibold">✅ Credit to ${secondary.name} with $${diff}</span>`;
+            const diff2 =(newPriorityConsumptionsum-newSecondaryConsumptionsum);
+            result += `<span class="text-green-600 font-semibold">✅ Credit to ${secondary.name} with $${diff} for  ${diff2} KWH reads</span>`;
           } else {
             result += `<span class="text-red-600 font-semibold">❌ No one is credited</span>`;
           }
