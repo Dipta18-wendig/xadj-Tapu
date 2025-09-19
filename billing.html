@@ -67,7 +67,7 @@
     const secondary = JSON.parse(sessionStorage.getItem("secondaryCustomer"));
     if (!priority || !secondary) {
       alert("Customer data missing. Please start from the beginning.");
-      window.location.href = "trial.html";
+      window.location.href = "index.html";
     }
 
     document.getElementById("priorityInfo").textContent = `Name: ${priority.name} | Contract Account Number: ${priority.account}`;
@@ -75,7 +75,8 @@
 
     function createTable(tableId, moveInDate) {
       const tbody = document.querySelector(`#${tableId} tbody`);
-      for (let i = 0; i < 36; i++) {
+      const baseDate = new Date(priority.moveIn);
+      for (let i = 0; i < 37; i++) {
         const row = document.createElement("tr");
 
         const dateTd = document.createElement("td");
@@ -83,6 +84,16 @@
         dateInput.type = "text";
         dateInput.placeholder = "MM-DD-YYYY";
         dateInput.className = "border p-1 w-full";
+
+            // For the first row only, set the date input to priority.moveIn date formatted as MM-DD-YYYY
+    if (i === 0) {
+      const baseDate = new Date(priority.moveIn);
+      const mm = String(baseDate.getMonth() + 1).padStart(2, "0");
+      const dd = String(baseDate.getDate()).padStart(2, "0");
+      const yyyy = baseDate.getFullYear();
+      dateInput.value = `${mm}-${dd}-${yyyy}`;
+    }
+        
         dateInput.addEventListener("change", () => {
           updateDays(i, tableId, moveInDate);
           updateChart(tableId, i);
@@ -92,17 +103,52 @@
         const daysTd = document.createElement("td");
         daysTd.className = "border text-center days-cell";
 
+            // Set days to 0 for first row
+    if (i === 0) {
+      daysTd.textContent = "0";
+    }
+
         const consTd = document.createElement("td");
+        consTd.className = "border text-center";  
         const consInput = document.createElement("input");
         consInput.type = "number";
         consInput.className = "border p-1 w-full";
+        consInput.className = "border p-1 w-full text-center";  
+            // Set consumption to 0 for first row
+    if (i === 0) {
+      consInput.value = "0";
+    }
         consTd.appendChild(consInput);
 
         const amtTd = document.createElement("td");
+        amtTd.className = "border text-center";  
         const amtInput = document.createElement("input");
         amtInput.type = "number";
+        amtInput.min = "0";           
+        amtInput.step = "0.01"; 
         amtInput.className = "border p-1 w-full";
+        amtInput.className = "border p-1 w-full text-center";  
+                 // Set amount to 0 for first row
+    if (i === 0) {
+      amtInput.value = "0.00";
+    }
         amtInput.addEventListener("input", () => updateChart(tableId, i));
+        amtInput.addEventListener("blur", () => {
+            const valStr = amtInput.value.trim();
+  if (valStr === "") {
+    // Do not change empty input on blur
+    return;
+  }
+  let val = parseFloat(amtInput.value);
+  if (isNaN(val) || val < 0) {
+    val = 0;
+  }
+  amtInput.value = val.toFixed(2);
+  updateChart(tableId, i);
+});
+
+
+
         amtTd.appendChild(amtInput);
 
         row.appendChild(dateTd);
@@ -130,7 +176,13 @@
       }
 
       const daysCell = currentRow.cells[1];
-      const diff = Math.ceil((currentDate - prevDate) / (1000 * 60 * 60 * 24));
+      let diff = Math.ceil((currentDate - prevDate) / (1000 * 60 * 60 * 24));
+
+      if (index === 1) {
+  diff =diff + 1;
+}
+
+  
       daysCell.textContent = isNaN(diff) ? '' : diff;
     }
 

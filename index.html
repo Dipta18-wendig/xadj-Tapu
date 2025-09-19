@@ -43,6 +43,10 @@
             <input type="date" name="custAMoveIn" required class="w-full border p-2 rounded"/>
           </div>
           <div>
+             <label class="block font-medium text-gray-700">Move-Out Date</label>
+            <input type="date" name="custAMoveOut" required class="w-full border p-2 rounded"/>
+          </div>
+          <div>
             <label class="block font-medium text-gray-700">Date of Uncrossing</label>
             <input type="date" name="custAUncross" required class="w-full border p-2 rounded"/>
           </div>
@@ -64,6 +68,10 @@
           <div>
             <label class="block font-medium text-gray-700">Move-In Date</label>
             <input type="date" name="custBMoveIn" required class="w-full border p-2 rounded"/>
+          </div>
+          <div>
+             <label class="block font-medium text-gray-700">Move-Out Date</label>
+            <input type="date" name="custBMoveOut" required class="w-full border p-2 rounded"/>
           </div>
           <div>
             <label class="block font-medium text-gray-700">Date of Uncrossing</label>
@@ -98,18 +106,20 @@
         name: event.target.custAName.value,
         account: event.target.custAAccount.value,
         moveIn: event.target.custAMoveIn.value,
+        moveOut: event.target.custAMoveOut.value,
         uncross: event.target.custAUncross.value
       };
       const custB = {
         name: event.target.custBName.value,
         account: event.target.custBAccount.value,
         moveIn: event.target.custBMoveIn.value,
+         moveOut: event.target.custBMoveOut.value,
         uncross: event.target.custBUncross.value
       };
 
       // Calculate durations
-      const durationA = calculateDays(custA.moveIn, custA.uncross);
-      const durationB = calculateDays(custB.moveIn, custB.uncross);
+      const durationA = calculateDays(custA.moveIn, custA.moveOut);
+      const durationB = calculateDays(custB.moveIn, custB.moveOut);
 
       // Assign priority and secondary
       let priorityCustomer, secondaryCustomer;
@@ -130,6 +140,43 @@ alert(`Redirecting to Cross Meter credit  Page\n\nPriority Customer:\nName: ${pr
       // Redirect to next page
       window.location.href = "billing.html";
     });
+
+
+    function convertToISO(dateStr) {
+  // Match MM/DD/YYYY
+  const match = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (match) {
+    let [ , mm, dd, yyyy ] = match;
+    mm = mm.padStart(2, "0");
+    dd = dd.padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`; // valid for <input type="date">
+  }
+  return null;
+}
+
+// Apply to all date inputs
+document.querySelectorAll('input[type="date"]').forEach(input => {
+  // When leaving the field
+  input.addEventListener("blur", function () {
+    const converted = convertToISO(this.value);
+    if (converted) {
+      this.value = converted;
+    }
+  });
+
+  // When pasting
+  input.addEventListener("paste", function (e) {
+    e.preventDefault();
+    const pasted = (e.clipboardData || window.clipboardData).getData("text");
+    const converted = convertToISO(pasted.trim());
+    if (converted) {
+      this.value = converted;
+    } else {
+      alert("Invalid date format. Please use MM/DD/YYYY.");
+    }
+  });
+});
+
   </script>
 </body>
 </html>
