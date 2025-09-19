@@ -274,6 +274,49 @@
       return total;
     }
 
+    function calculateTotalConsumption(tableId) {
+  const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+  let total = 0;
+  rows.forEach(row => {
+    const consInput = row.cells[2].querySelector("input");
+    const val = parseFloat(consInput.value);
+    if (!isNaN(val)) total += val;
+  });
+  return total;
+}
+const priorityTotalConsumption = calculateTotalConsumption("priorityTable");
+const secondaryTotalConsumption = calculateTotalConsumption("secondaryTable");
+
+    function getLast16ValidConsumptions(tableId) {
+  const rows = Array.from(document.querySelectorAll(`#${tableId} tbody tr`));
+  const consumptions = [];
+  for (let i = rows.length - 1; i >= 0 && consumptions.length < 16; i--) {
+    const consInput = rows[i].cells[2].querySelector("input");
+    const val = parseFloat(consInput.value);
+    if (!isNaN(val)) consumptions.unshift(val);
+  }
+  return consumptions;
+}
+
+function getConsumptionsAfterDate(tableId, fromDate) {
+  const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+  const consumptions = [];
+  rows.forEach(row => {
+    const dateVal = row.cells[0].querySelector("input").value;
+    const consVal = row.cells[2].querySelector("input").value;
+    if (dateVal && consVal) {
+      const rowDate = new Date(dateVal);
+      if (rowDate >= fromDate) {
+        const consumption = parseFloat(consVal);
+        if (!isNaN(consumption)) consumptions.push(consumption);
+      }
+    }
+  });
+  return consumptions;
+}
+
+ 
+    
     function getLast16ValidAmounts(tableId) {
       const rows = Array.from(document.querySelectorAll(`#${tableId} tbody tr`));
       const amounts = [];
@@ -309,10 +352,13 @@
     document.getElementById("compareBtn").addEventListener("click", () => {
       const priorityTotal = calculateTotal("priorityTable");
       const secondaryTotal = calculateTotal("secondaryTable");
+      const priorityTotalConsumption = calculateTotalConsumption("priorityTable");
+      const secondaryTotalConsumption = calculateTotalConsumption("secondaryTable");
+
 
       let result = `
-<b>${priority.name}</b> Total Amount: $${priorityTotal.toFixed(2)}<br>
-<b>${secondary.name}</b> Total Amount: $${secondaryTotal.toFixed(2)}<br><br>`;
+<b>${priority.name}</b> Total Amount: $${priorityTotal.toFixed(2)}, Total Consumption: ${priorityTotalConsumption.toFixed(2)}<br>
+<b>${secondary.name}</b> Total Amount: $${secondaryTotal.toFixed(2)}, Total Consumption: ${secondaryTotalConsumption.toFixed(2)}<br><br>`;
 
       if (priorityTotal > secondaryTotal) {
         const diff = (priorityTotal - secondaryTotal).toFixed(2);
@@ -344,8 +390,14 @@
           const newPriorityAmounts = getAmountsAfterDate("secondaryTable", moveInDate);
           const newSecondaryAmounts = getAmountsAfterDate("priorityTable", moveInDate);
 
+          const newPriorityConsumptions = getConsumptionsAfterDate("secondaryTable", moveInDate);
+          const newSecondaryConsumptions = getConsumptionsAfterDate("priorityTable", moveInDate);
+
           const newPrioritySum = sumArray(newPriorityAmounts);
           const newSecondarySum = sumArray(newSecondaryAmounts);
+
+            const newPriorityConsSum = sumArray(newPriorityConsumptions);
+            const newSecondaryConsSum = sumArray(newSecondaryConsumptions);
 
           result += `<b>📅 Duration &lt; 16 months: Using ${secondary.moveIn}</b><br>`;
           result += `${secondary.name} (new priority): $${newPrioritySum.toFixed(2)}<br>`;
