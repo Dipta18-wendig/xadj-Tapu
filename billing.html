@@ -18,6 +18,7 @@
           <tr>
             <th class="p-2 border">Date</th>
             <th class="p-2 border">No of Days</th>
+            
             <th class="p-2 border">Consumption</th>
             <th class="p-2 border">Amount</th>
           </tr>
@@ -34,6 +35,7 @@
           <tr>
             <th class="p-2 border">Date</th>
             <th class="p-2 border">No of Days</th>
+            
             <th class="p-2 border">Consumption</th>
             <th class="p-2 border">Amount</th>
           </tr>
@@ -107,6 +109,10 @@
     if (i === 0) {
       daysTd.textContent = "0";
     }
+
+       
+
+
 
         const consTd = document.createElement("td");
         consTd.className = "border text-center";  
@@ -362,7 +368,8 @@ function getConsumptionsAfterDate(tableId, fromDate) {
 
       if (priorityTotal > secondaryTotal) {
         const diff = (priorityTotal - secondaryTotal).toFixed(2);
-        result += `<span class="text-green-600 font-semibold">✅ Credit to ${priority.name} with $${diff}</span>`;
+        const diff2 = (priorityTotalConsumption-secondaryTotalConsumption);
+        result += `<span class="text-green-600 font-semibold">✅ Credit to ${priority.name} with $${diff} for ${diff2} KWH Consumption </span>`;
       } else {
         const durationMs = new Date(secondary.uncross) - new Date(secondary.moveIn);
         const durationMonths = durationMs / (1000 * 60 * 60 * 24 * 30.44);
